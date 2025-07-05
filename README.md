@@ -1,96 +1,212 @@
-# Face Analysis Under Real-World Visual Distortions
+---
+# 🧠 Face Analysis Project: Gender Classification & Robust Face Recognition
+---
 
-This project contains solutions for two face analysis tasks under challenging visual conditions:
+## **1. Task A – Gender Classification**
+
+### **1.1 🎯 Objective**
+
+Build a high-accuracy deep learning model to classify face images as **Male** or **Female**, even under natural variations in lighting, pose, and image quality.
 
 ---
 
-## 🧩 Part A: Gender Classification
+### **1.2 🛠️ Setup Instructions**
 
-> Predict the gender (Male/Female) from facial images.
+#### Dataset Structure:
 
-### Files:
+```
+Task_A/
+├── train/
+│   ├── male/
+│   └── female/
+└── val/
+    ├── male/
+    └── female/
+```
 
-- `part_a_model_training.ipynb`: Train a ResNet-18 classifier on the gender classification task
-- `part_a_model_evaluation_only.ipynb`: Load the trained model and evaluate on validation data
-- `README.md`: Setup instructions and usage for Part A
-
-📁 Folder: [`part_a/`](./part_a/)
-
----
-
-## 🧩 Part B: Face Recognition
-
-> Recognize a person’s identity from face images affected by blur, fog, rain, low-light, glare, etc.
-
-### Files:
-
-- `part_b_model_training.ipynb`: Train a ResNet-50 classifier to recognize identities under visual distortions
-- `part_b_model_evaluation_only.ipynb`: Evaluate the trained model on both training and validation datasets
-- `README.md`: Instructions specific to Part B, including class imbalance handling
-
-📁 Folder: [`part_b/`](./part_b/)
-
----
-
-## 🛠️ Environment & Requirements
-
-- Python 3.8+
-- PyTorch
-- torchvision
-- scikit-learn
-- PIL / Pillow
-- tqdm
-- Google Colab or GPU environment recommended
-
----
-
-## 📁 Dataset Format (Expected)
-
-Both Part A and Part B assume a dataset stored in Google Drive, mounted via:
+#### Colab Environment Setup:
 
 ```python
 from google.colab import drive
 drive.mount('/content/drive')
+
+!pip install torch torchvision matplotlib seaborn --quiet
 ```
 
+---
+
+### **1.3 🧪 Approach**
+
+1. **Transfer Learning with ResNet18**
+
+   - Load pretrained ResNet18 from `torchvision.models`.
+   - Replace the final FC layer with `nn.Linear(512, 2)` for binary output.
+
+2. **Robust Data Augmentation**
+
+   - Techniques used:
+
+     - `Resize`, `HorizontalFlip`, `ColorJitter`, `RandomRotation`
+     - Optional: `GaussianBlur`
+
+   - Applied only on the training set to improve generalization.
+
+3. **Training Strategy**
+
+   - Loss Function: `CrossEntropyLoss`
+   - Optimizer: `Adam` with learning rate `1e-4`
+   - Epochs: `10`, Batch size: `32`
+
+4. **Evaluation Metrics**
+
+   - Accuracy, Precision, Recall, F1-Score
+   - Full classification report using `sklearn`
+   - Confusion matrix visualization using `seaborn`
+
+---
+
+### **1.4 🧱 Model Architecture**
+
+```
+Input Image → [224x224 RGB]
+    ↓
+Pretrained ResNet18 Backbone
+    ↓
+Modified Fully Connected Layer (512 → 2)
+    ↓
+Softmax → Gender Prediction (Male / Female)
 ```
 
-Make sure to update `dataset_path` in the code as per your Drive location.
+---
+
+### **1.5 ✅ Key Innovations**
+
+- Lightweight architecture for fast training and high performance.
+- Strong augmentation pipeline to simulate real-world image variability.
+- End-to-end model training, evaluation, visualization, and saving.
 
 ---
 
-## 📦 Output
+### **1.6 💾 Output**
 
-Each model saves the best checkpoint as:
+- Trained model file: `model_resnet18_task_a.pth`
+- Output includes:
 
-- `<model_name>.pth`
-
-You can re-use this file in the evaluation notebooks.
-
----
-
-## 📑 Evaluation Metrics
-
-Each part uses the following metrics (macro-averaged when applicable):
-
-- **Accuracy**
-- **Precision**
-- **Recall**
-- **F1-Score**
-- **Classification Report**
+  - Classification report
+  - Confusion matrix
+  - Gender-wise performance scores
 
 ---
 
-## ✅ Status
+## **2. Task B – Face Recognition under Challenging Visual Conditions**
 
-| Task                       | Model      | Status      |
-| -------------------------- | ---------- | ----------- |
-| Gender Classification      | ResNet-18  | ✅ Complete |
-| Face Recognition           | ResNet-50  | ✅ Complete |
-| Visual Distortion Handling | Both Tasks | ✅ Included |
-| Class Imbalance Handling   | Part B     | ✅ Included |
+### **2.1 🎯 Objective**
+
+Train a deep learning model to recognize individuals from a fixed identity set, even when the faces are visually degraded (e.g., **blurred, foggy, sunny, rainy, low-light**).
 
 ---
 
-> Built with robustness in mind, ensuring face models work reliably in real-world degraded environments.
+### **2.2 🛠️ Setup Instructions**
+
+#### Dataset Structure:
+
 ```
+Task_B/
+├── train/
+│   └── <Person Name>/
+│       ├── <person>.jpg
+│       └── Distortion/
+│           ├── <person>_blurred.jpg
+│           ├── <person>_foggy.jpg
+│           └── ...
+├── val/
+│   └── <Person Name>/
+        ├── <person>.jpg
+        └── Distortion/
+            ├── <person>_lowlight.jpg
+            └── ...
+```
+
+#### Colab Setup:
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+
+dataset_path = "/content/drive/MyDrive/Task_B"
+```
+
+---
+
+### **2.3 🧪 Approach**
+
+1. **Custom Dataset Class**
+
+   - Walks through all person folders and distortion subfolders.
+   - Assigns class index to each person.
+
+2. **Model Architecture**
+
+   - Backbone: Pretrained `ResNet-50`
+   - Final FC Layer: `2048 → num_classes`
+   - Loss Function: `CrossEntropyLoss` with **class weights** to address imbalance.
+
+3. **Training Strategy**
+
+   - Optimizer: `Adam`, LR = `1e-4`
+   - Scheduler: `StepLR(step_size=5, gamma=0.5)`
+   - Batch size: `32`, Epochs: `10`
+   - Checkpointing: Saves model with best macro F1 on validation.
+
+4. **Visual Robustness**
+
+   - Augmentation includes resized, brightened, noisy, and distorted samples.
+   - Learns identity features invariant to environmental changes.
+
+---
+
+### **2.4 🧱 Model Pipeline**
+
+```
+Input Image (clean/distorted)
+    ↓
+Transform (resize, normalize, augment)
+    ↓
+Pretrained ResNet50 Backbone
+    ↓
+Modified FC Layer (2048 → num_classes)
+    ↓
+Softmax → Identity Prediction
+```
+
+---
+
+### **2.5 ✅ Key Innovations**
+
+- Integrated distortions during training for real-world robustness.
+- Custom class balancing using `sklearn.compute_class_weight`.
+- Modular training + evaluation scripts for portability.
+
+---
+
+### **2.6 💾 Output**
+
+- Trained model file: `model_b.pth`
+- Reports include:
+
+  - Macro-averaged Accuracy, Precision, Recall, F1
+  - Identity-wise classification report
+
+---
+
+### **2.7 📈 Evaluation Script**
+
+Use `part_b_model_evaluation_only.py` to evaluate the model.
+
+```bash
+python part_b_model_evaluation_only.py \
+  --data_path "/content/drive/MyDrive/Task_B" \
+  --model_path "model_b.pth"
+```
+
+---
